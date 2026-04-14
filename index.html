@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>普通锥齿轮差速器设计计算</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #07090f;
+  --bg1:      #0d1018;
+  --bg2:      #111520;
+  --bg3:      #161c2c;
+  --border:   #1c2438;
+  --border2:  #263050;
+  --txt:      #d0d8ee;
+  --txt2:     #7a88aa;
+  --txt3:     #3e4a68;
+  --blue:     #4d9eff;
+  --blue2:    #2d6ece;
+  --green:    #34d399;
+  --green2:   #0a4820;
+  --amber:    #f5a623;
+  --red:      #ff6b6b;
+  --ok-bg:    #0a2e18;
+  --err-bg:   #2a0a0a;
+  --warn-bg:  #1e1200;
+}
+
+body {
+  font-family: "PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  min-height: 100vh;
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+/* ── Header ── */
+.app-header {
+  background: #090d18;
+  border-bottom: 3px solid var(--blue2);
+  padding: 20px 18px 16px;
+}
+.app-header h1 { font-size: 26px; font-weight: 900; color: #fff; line-height: 1.3; margin-bottom: 6px; }
+.app-header .sub { font-size: 18px; color: var(--txt2); line-height: 1.7; }
+
+/* ── Tab bar ── */
+.tabs {
+  display: flex; background: #0a0e1a;
+  border-bottom: 2px solid var(--border2);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  padding: 16px 20px; cursor: pointer;
+  color: var(--txt2); font-size: 19px; font-weight: 700;
+  white-space: nowrap; border-bottom: 4px solid transparent;
+  margin-bottom: -2px; transition: all 0.15s; flex-shrink: 0;
+  user-select: none;
+}
+.tab:hover { color: var(--txt); background: rgba(255,255,255,0.04); }
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* ── Content ── */
+.content { display: none; padding: 18px 14px 40px; max-width: 960px; margin: 0 auto; }
+.content.active { display: block; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg1); border: 1.5px solid var(--border);
+  border-radius: 14px; padding: 20px 18px; margin-bottom: 18px;
+}
+.card-title {
+  font-size: 22px; font-weight: 800; color: var(--blue);
+  border-bottom: 2px solid var(--border); padding-bottom: 14px;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+}
+
+/* ── Grid ── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) {
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+}
+
+/* ── Fields ── */
+.field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+.field label { font-size: 19px; font-weight: 700; color: var(--txt); line-height: 1.4; }
+.field input, .field select {
+  padding: 13px 14px; border: 2px solid var(--border2); border-radius: 10px;
+  font-size: 21px; background: var(--bg2); color: var(--txt);
+  font-family: inherit; min-height: 54px; transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--blue); background: var(--bg3);
+}
+.field select option { background: var(--bg2); }
+.field .unit { font-size: 16px; color: var(--txt2); margin-top: 2px; line-height: 1.5; }
+
+/* ── Buttons ── */
+.btn {
+  padding: 15px 28px; border: none; border-radius: 10px;
+  font-size: 20px; font-weight: 800; cursor: pointer;
+  transition: all 0.15s; min-height: 56px; font-family: inherit;
+  touch-action: manipulation;
+}
+.btn-primary { background: var(--blue2); color: #fff; }
+.btn-primary:hover { background: var(--blue); }
+.btn-success { background: #1a6e3a; color: #fff; }
+.btn-success:hover { background: #22904e; }
+.btn-ghost { background: var(--bg3); color: var(--txt2); border: 1.5px solid var(--border2); }
+.btn-ghost:hover { color: var(--txt); background: var(--border); }
+.btn-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.btn-bar .btn { flex: 1; min-width: 140px; }
+
+/* ── Formula box ── */
+.formula-box {
+  background: var(--bg2); border-left: 5px solid var(--blue2);
+  padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 12px 0;
+  font-family: "Consolas","Courier New",monospace; font-size: 18px;
+  color: var(--txt); line-height: 2.2; overflow-x: auto;
+  word-break: break-word; white-space: pre-wrap;
+}
+.formula-box .hi { color: var(--blue); font-weight: 700; }
+.formula-box .hi-g { color: var(--green); font-weight: 700; }
+.formula-box .hi-a { color: var(--amber); font-weight: 700; }
+
+/* ── Result cards ── */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px; margin-top: 14px;
+}
+.rc {
+  background: var(--bg2); border: 2px solid var(--border2);
+  border-radius: 12px; padding: 16px 16px;
+}
+.rc.rc-ok  { border-color: #267a48; background: var(--ok-bg); }
+.rc.rc-err { border-color: #8a2a2a; background: var(--err-bg); }
+.rc.rc-warn { border-color: #8a6200; background: var(--warn-bg); }
+.rc .rc-label { font-size: 16px; color: var(--txt2); margin-bottom: 6px; line-height: 1.5; font-weight: 600; }
+.rc .rc-value { font-size: 30px; font-weight: 800; color: #fff; font-family: monospace; line-height: 1.1; }
+.rc .rc-unit  { font-size: 17px; color: var(--txt2); margin-top: 2px; }
+.rc .rc-note  { font-size: 15px; color: var(--txt3); margin-top: 6px; font-family: monospace; line-height: 1.5; word-break: break-all; }
+
+/* ── Info / tip / warning boxes ── */
+.info-box {
+  background: #1a1400; border: 2px solid #5a4200;
+  border-radius: 10px; padding: 14px 18px;
+  font-size: 18px; color: #d4b060; margin: 12px 0; line-height: 1.8;
+}
+.tip-box {
+  background: #08182e; border: 2px solid var(--blue2);
+  border-radius: 10px; padding: 14px 18px;
+  font-size: 18px; color: #90bce0; margin: 12px 0; line-height: 1.8;
+}
+.warn-box {
+  background: #1a0a0a; border: 2px solid #8a2020;
+  border-radius: 10px; padding: 14px 18px;
+  font-size: 18px; color: #e08080; margin: 12px 0; line-height: 1.8;
+}
+
+/* ── Section title ── */
+.sec-title {
+  font-size: 20px; font-weight: 800; color: var(--blue);
+  margin: 20px 0 12px; border-left: 5px solid var(--blue2);
+  padding-left: 12px;
+}
+
+/* ── Design confirm area ── */
+.confirm-card {
+  display: none; margin-top: 16px;
+  border-top: 2px dashed var(--border2); padding-top: 16px;
+}
+
+/* ── Strength method blocks ── */
+.method-block {
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 12px;
+}
+.method-block.m1 { background: #091428; border: 2px solid #1e4080; }
+.method-block.m2 { background: #0e1c0e; border: 2px solid #1a5e30; }
+.method-label {
+  font-size: 18px; font-weight: 800; margin-bottom: 10px;
+  padding: 6px 12px; border-radius: 7px; display: block;
+}
+.method-label.m1 { background: #1a3e78; color: #80b8ff; }
+.method-label.m2 { background: #1a5a2a; color: #60d890; }
+
+/* ── Apply msg ── */
+.apply-msg { font-size: 18px; margin-top: 10px; padding: 10px 14px; border-radius: 8px; display: none; }
+.apply-msg.ok  { background: var(--ok-bg); color: var(--green); border: 1.5px solid #267a48; }
+.apply-msg.err { background: var(--err-bg); color: var(--red); border: 1.5px solid #8a2a2a; }
+
+/* ── Inline formula detail ── */
+.calc-detail {
+  background: var(--bg2); border: 1.5px solid var(--border2);
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+}
+
+/* ── Mobile tweaks ── */
+@media (max-width: 480px) {
+  body { font-size: 18px; }
+  .app-header h1 { font-size: 22px; }
+  .app-header .sub { font-size: 16px; }
+  .tab { font-size: 17px; padding: 13px 14px; }
+  .card-title { font-size: 20px; }
+  .field label { font-size: 18px; }
+  .field input, .field select { font-size: 20px; }
+  .btn { font-size: 19px; padding: 14px 18px; }
+  .formula-box { font-size: 16px; }
+  .rc .rc-value { font-size: 26px; }
+}
+user-select: none
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <h1>⚖️ 普通锥齿轮差速器设计计算</h1>
+  <div class="sub">《汽车设计》第6版（闵海涛、王建华）· 差速器几何参数 · 行星轴尺寸 · 弯曲强度校核</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab(0)">① 几何参数设计</div>
+  <div class="tab" onclick="switchTab(1)">② 强度校核</div>
+</div>
+
+<!-- ═══════ TAB 0: 几何参数设计 ═══════ -->
+<div class="content active" id="tab0">
+
+  <!-- 公共输入 -->
+  <div class="card">
+    <div class="card-title">📥 基本输入参数</div>
+    <div class="tip-box">Tc 为差速器计算转矩（N·m），直接输入。其余参数可按典型值输入或参照提示调整。</div>
+
+    <div class="grid3">
+      <div class="field">
+        <label>Tc — 差速器计算转矩 (N·m)</label>
+        <input type="number" id="Tc" value="3000" step="10" min="1">
+        <div class="unit">从动锥齿轮计算转矩，由主减速器计算确定</div>
+      </div>
+      <div class="field">
+        <label>行星齿轮数 n</label>
+        <select id="nPlanet">
+          <option value="2" selected>2（乘用车，轻载）</option>
+          <option value="4">4（商用车，重载）</option>
+        </select>
+        <div class="unit">乘用车取2，商用车取4</div>
+      </div>
+      <div class="field">
+        <label>行星齿轮球面半径系数 Kb</label>
+        <input type="number" id="Kb" value="2.9" step="0.1" min="1">
+        <div class="unit">乘用车取2.9；商用车取3.1</div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="field">
+        <label>行星齿轮齿数 z₃</label>
+        <input type="number" id="z3" value="11" min="10" max="16" step="1">
+        <div class="unit">一般10~16，不少于10</div>
+      </div>
+      <div class="field">
+        <label>半轴齿轮齿数 z₄</label>
+        <input type="number" id="z4" value="22" min="14" max="25" step="1">
+        <div class="unit">14~25，z₄/z₃ = 1.5~2.0</div>
+      </div>
+      <div class="field">
+        <label>差速器齿轮压力角 αd (°)</label>
+        <input type="number" id="alphaDiff" value="22.5" step="0.5">
+        <div class="unit">一般取22°30' 或 20°</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>rₐ — 行星轮背面到差速器壳轴线距离 (mm)</label>
+      <input type="number" id="rd" value="" step="0.5" placeholder="留空 → 自动取半轴齿轮中点节圆半径">
+      <div class="unit">即差速器壳到行星轮背面距离；约为半轴齿轮齿宽中点节圆半径；留空自动估算</div>
+    </div>
+
+    <div class="btn-bar">
+      <button class="btn btn-primary" onclick="calcDiff()">🔢 计算差速器参数</button>
+    </div>
+  </div>
+
+  <!-- 结果区 -->
+  <div id="diffResults"></div>
+
+  <!-- 设计取值确认 -->
+  <div class="card confirm-card" id="diffFinalCard">
+    <div class="card-title">✏️ 设计取值确认</div>
+    <div class="tip-box">参考上方计算值，将需要圆整的参数输入到下方，点击【应用取值】后强度校核将使用这些圆整后的数据。</div>
+
+    <div class="grid3">
+      <div class="field">
+        <label>行星轮节锥距 A₀ (mm)<br><span id="Ad_ref" style="color:var(--green);font-size:16px;font-weight:700"></span></label>
+        <input type="number" id="Ad_final" step="0.1">
+        <div class="unit">计算值参考上方</div>
+      </div>
+      <div class="field">
+        <label>端面模数 m (mm)<br><span id="ms_d_ref" style="color:var(--green);font-size:16px;font-weight:700"></span></label>
+        <input type="number" id="ms_d_final" step="0.01">
+        <div class="unit">建议圆整为标准模数</div>
+      </div>
+      <div class="field">
+        <label>半轴齿轮齿面宽 b₂ (mm)<br><span id="b4_ref" style="color:var(--green);font-size:16px;font-weight:700"></span></label>
+        <input type="number" id="b4_final" step="0.5">
+        <div class="unit">≈ A₀/3 ~ A₀/4</div>
+      </div>
+      <div class="field">
+        <label>行星齿轮齿面宽 b₃ (mm)<br><span id="b3_ref" style="color:var(--green);font-size:16px;font-weight:700"></span></label>
+        <input type="number" id="b3_final" step="0.5">
+        <div class="unit">≈ b₂，通常稍小</div>
+      </div>
+      <div class="field">
+        <label>rₐ 设计取值 (mm)<br><span id="ra_ref" style="color:var(--green);font-size:16px;font-weight:700"></span></label>
+        <input type="number" id="ra_final" step="0.5">
+        <div class="unit">行星轮背面到差速器壳轴线距离</div>
+      </div>
+    </div>
+
+    <div class="btn-bar">
+      <button class="btn btn-success" onclick="applyDiffFinalParams()">✅ 应用取值</button>
+      <button class="btn btn-ghost" onclick="resetDiffFinalParams()">↩ 恢复计算值</button>
+    </div>
+    <div class="apply-msg" id="diffApplyMsg"></div>
+  </div>
+</div>
+
+<!-- ═══════ TAB 1: 强度校核 ═══════ -->
+<div class="content" id="tab1">
+  <div class="card">
+    <div class="card-title">🔢 差速器齿轮弯曲强度校核</div>
+
+    <div class="formula-box">
+<span class="hi">弯曲应力（式5-38）：</span>
+σ<sub>w</sub> = 2·<span class="hi">Tc</span>·k<sub>s</sub>·k<sub>m</sub> / (k<sub>V</sub>·m·b₂·d₂·J·n) × 10³
+
+  n = 行星齿轮数；J = 综合系数（查表）
+  b₂ = 半轴齿轮齿面宽(mm)；d₂ = 半轴齿轮大端分度圆直径(mm)
+  m = 端面模数(mm)；Tc 直接输入
+  许用值：[σ<sub>w</sub>] ≤ 980 MPa（按最大应力）
+</div>
+
+    <div class="grid3">
+      <div class="field">
+        <label>综合系数 J（查表）</label>
+        <input type="number" id="J_diff" value="0.22" step="0.01" min="0.01">
+        <div class="unit">查弯曲强度综合系数图表，约0.20~0.27</div>
+      </div>
+      <div class="field">
+        <label>动载系数 kV</label>
+        <input type="number" id="kv" value="1.0" step="0.01" min="0.5">
+        <div class="unit">一般取1.0；高速时可取>1</div>
+      </div>
+      <div class="field">
+        <label>齿宽系数 km</label>
+        <input type="number" id="km_s" value="1.1" step="0.01" min="0.5">
+        <div class="unit">一般取1.0~1.25</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>尺寸系数 ks &nbsp;<span id="ks_auto_hint" style="color:var(--green);font-size:16px;font-weight:700"></span></label>
+      <input type="number" id="ks_input" value="" step="0.0001" placeholder="留空 → 按端面模数自动计算" oninput="updateKsHint()">
+      <div class="unit">留空时自动计算（需先完成①几何参数计算）：m≥1.6 → ks=(m/25.4)^0.25；m&lt;1.6 → ks=0.5；也可手动输入覆盖</div>
+    </div>
+
+    <div class="btn-bar">
+      <button class="btn btn-primary" onclick="calcDiffStrength()">🔍 执行强度校核</button>
+    </div>
+    <div id="diffStrengthResults" style="margin-top:14px"></div>
+  </div>
+
+  <div class="warn-box">
+    ⚠️ 如尚未执行【Tab①几何参数设计】计算，点击强度校核按钮时将先自动运行几何参数计算。
+  </div>
+</div>
+
+<script>
+// ─── 状态 ───────────────────────────────────────────────
+const state = {};
+
+// ─── 工具函数 ─────────────────────────────────────────────
+function v(id)     { return parseFloat(document.getElementById(id).value) || 0; }
+function vStr(id)  { return document.getElementById(id).value; }
+function fmtN(val, d=2) { return isFinite(val) ? val.toFixed(d) : '—'; }
+
+function switchTab(idx) {
+  document.querySelectorAll('.content').forEach((el, i) => el.classList.toggle('active', i === idx));
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', i === idx));
+}
+
+function mkCards(items) {
+  return '<div class="result-grid">' + items.map(it => {
+    const cls = it.ok === true  ? 'rc rc-ok'
+              : it.ok === false ? 'rc rc-err'
+              : 'rc';
+    return `<div class="${cls}">
+      <div class="rc-label">${it.label}</div>
+      <div class="rc-value">${it.value}</div>
+      ${it.unit ? `<div class="rc-unit">${it.unit}</div>` : ''}
+      ${it.note ? `<div class="rc-note">${it.note}</div>` : ''}
+    </div>`;
+  }).join('') + '</div>';
+}
+
+// ─── 几何参数计算 ─────────────────────────────────────────
+function calcDiff() {
+  const Tc_   = v('Tc');
+  const n_    = parseInt(vStr('nPlanet'));
+  const Kb_   = v('Kb');
+  const z3_   = v('z3'), z4_ = v('z4');
+
+  if (Tc_ <= 0) { alert('请先输入有效的 Tc（差速器计算转矩）'); return; }
+
+  const Td = Tc_;  // 差速器计算转矩直接用 Tc
+  const Rb = Kb_ * Math.pow(Td, 1/3);
+  const A_d = 0.98 * Rb;
+  const delta3 = Math.atan(z3_ / z4_);
+  const delta4 = Math.atan(z4_ / z3_);
+  const m_face3 = 2 * A_d * Math.sin(delta3) / z3_;
+  const m_face4 = 2 * A_d * Math.sin(delta4) / z4_;
+  const ms_d = m_face3;
+  const D3 = ms_d * z3_;
+  const D4 = ms_d * z4_;
+  const b4_calc = Math.min(A_d / 3, 10 * ms_d);
+  const D4_mid = D4 - b4_calc * Math.sin(delta4);
+
+  const ra_user = parseFloat(document.getElementById('rd').value);
+  const ra_auto = D4_mid / 2;
+  const ra_ = (!isNaN(ra_user) && ra_user > 0) ? ra_user : ra_auto;
+  const b3 = b4_calc;
+
+  const d_pin = Math.pow(Td * 1e3 / (1.1 * n_ * ra_), 1/3);
+  const L_pin = 1.1 * d_pin;
+
+  const ratio = z4_ / z3_;
+  const ratio_ok = ratio >= 1.5 && ratio <= 2.0;
+  const z3_ok = z3_ >= 10;
+  const divisible = (z4_ * 2) % n_ === 0;
+
+  Object.assign(state, { Tc: Td, Td, Rb, A_d, ms_d, D3, D4, D4_mid, b3, b4: b4_calc,
+    z3: z3_, z4: z4_, n_planet: n_, ra_pin: ra_, d_pin, L_pin, delta3, delta4 });
+  updateKsHint();  // 几何参数更新后刷新 ks 自动计算提示
+
+  document.getElementById('diffResults').innerHTML =
+    '<div class="card">' +
+    '<div class="card-title">📐 几何参数计算结果</div>' +
+
+    '<div class="sec-title">① 球面半径 · 节锥距 · 节锥角</div>' +
+    `<div class="formula-box">Rb = Kb × ∛Td = ${Kb_} × ∛${fmtN(Td,1)} = <strong>${fmtN(Rb,2)} mm</strong>
+A₀ = 0.98 × Rb = 0.98 × ${fmtN(Rb,2)} = <strong>${fmtN(A_d,2)} mm</strong>
+δ₃ = arctan(z₃/z₄) = arctan(${z3_}/${z4_}) = <strong>${fmtN(delta3*180/Math.PI,3)}°</strong>
+δ₄ = arctan(z₄/z₃) = arctan(${z4_}/${z3_}) = <strong>${fmtN(delta4*180/Math.PI,3)}°</strong></div>` +
+    mkCards([
+      { label: '差速器计算转矩 Td', value: fmtN(Td,1), unit: 'N·m', note: '= Tc（直接输入）' },
+      { label: '行星轮球面半径 Rb', value: fmtN(Rb,2), unit: 'mm', note: `Kb×∛Td = ${Kb_}×∛${fmtN(Td,1)}` },
+      { label: '行星轮节锥距 A₀', value: fmtN(A_d,2), unit: 'mm', note: `0.98 × ${fmtN(Rb,2)}` },
+      { label: '行星轮节锥角 δ₃', value: fmtN(delta3*180/Math.PI,3), unit: '°', note: `arctan(${z3_}/${z4_})` },
+      { label: '半轴齿轮节锥角 δ₄', value: fmtN(delta4*180/Math.PI,3), unit: '°', note: `arctan(${z4_}/${z3_})` },
+    ]) +
+
+    '<div class="sec-title">② 端面模数</div>' +
+    `<div class="formula-box">m = 2A₀·sinδ₃/z₃ = 2×${fmtN(A_d,2)}×${fmtN(Math.sin(delta3),4)}/${z3_} = <strong>${fmtN(m_face3,3)} mm</strong>
+m = 2A₀·sinδ₄/z₄ = 2×${fmtN(A_d,2)}×${fmtN(Math.sin(delta4),4)}/${z4_} = <strong>${fmtN(m_face4,3)} mm</strong>（验算）</div>` +
+    mkCards([
+      { label: '端面模数 m（计算值）', value: fmtN(ms_d,3), unit: 'mm', note: '建议圆整为标准模数' },
+      { label: '行星齿轮大端直径 D₃', value: fmtN(D3,2), unit: 'mm', note: `m × z₃ = ${fmtN(ms_d,3)} × ${z3_}` },
+      { label: '半轴齿轮大端直径 D₄', value: fmtN(D4,2), unit: 'mm', note: `m × z₄ = ${fmtN(ms_d,3)} × ${z4_}` },
+      { label: '半轴齿轮中点节圆直径 D₄_mid', value: fmtN(D4_mid,2), unit: 'mm', note: `≈ D₄ − b₄·sinδ₄` },
+      { label: '齿面宽 b₃/b₂（初估）', value: fmtN(b3,2), unit: 'mm', note: 'min(A₀/3, 10m)' },
+    ]) +
+
+    '<div class="sec-title">③ 齿数校验</div>' +
+    mkCards([
+      { label: '齿数比 z₄/z₃', value: fmtN(ratio,3), unit: '', ok: ratio_ok, note: ratio_ok ? '✓ 在 1.5~2.0 范围内' : '✗ 应在 1.5~2.0 范围内' },
+      { label: '行星轮齿数 z₃ ≥ 10', value: z3_, unit: '', ok: z3_ok, note: z3_ok ? '✓ 满足' : '✗ 应 ≥ 10' },
+      { label: '装配条件 (2z₄被n整除)', value: divisible ? '满足 ✓' : '不满足 ✗', unit: '', ok: divisible, note: `2×${z4_} = ${2*z4_}，n = ${n_}` },
+    ]) +
+
+    '<div class="sec-title">④ 行星齿轮轴（式5-36、5-37）</div>' +
+    `<div class="formula-box">rₐ = ${(!isNaN(ra_user)&&ra_user>0)?'手动输入值':'自动估算（D₄_mid/2）'} = <strong>${fmtN(ra_,2)} mm</strong>
+d = ∛(Tc×10³ / (1.1·n·rₐ)) = ∛(${fmtN(Td,1)}×10³ / (1.1×${n_}×${fmtN(ra_,2)}))
+  = ∛(${fmtN(Td*1e3/(1.1*n_*ra_),2)}) = <strong>${fmtN(d_pin,2)} mm</strong>
+L（式5-37）= 1.1 × d = 1.1 × ${fmtN(d_pin,2)} = <strong>${fmtN(L_pin,2)} mm</strong></div>` +
+    mkCards([
+      { label: 'rₐ（实际取值）', value: fmtN(ra_,2), unit: 'mm', note: '行星轮背面到差速器壳轴线距离' },
+      { label: '行星齿轮轴直径 d', value: fmtN(d_pin,2), unit: 'mm', note: '建议圆整到标准尺寸' },
+      { label: '行星轴支承长度 L（式5-37）', value: fmtN(L_pin,2), unit: 'mm', note: '= 1.1 × d' },
+    ]) +
+    '</div>';
+
+  // 填充设计取值确认区
+  const fc = document.getElementById('diffFinalCard');
+  fc.style.display = '';
+  document.getElementById('Ad_ref').textContent  = `计算值: ${fmtN(A_d,2)} mm`;
+  document.getElementById('ms_d_ref').textContent = `计算值: ${fmtN(ms_d,3)} mm`;
+  document.getElementById('b4_ref').textContent   = `计算值: ${fmtN(b4_calc,2)} mm`;
+  document.getElementById('b3_ref').textContent   = `计算值: ${fmtN(b3,2)} mm`;
+  document.getElementById('ra_ref').textContent   = `计算值: ${fmtN(ra_,2)} mm`;
+
+  ['Ad_final','ms_d_final','b4_final','b3_final','ra_final'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el.dataset.userSet) {
+      el.value = [fmtN(A_d,2), fmtN(ms_d,3), fmtN(b4_calc,2), fmtN(b3,2), fmtN(ra_,2)][i];
+    }
+  });
+}
+
+function applyDiffFinalParams() {
+  const Ad_v  = parseFloat(document.getElementById('Ad_final').value);
+  const msd_v = parseFloat(document.getElementById('ms_d_final').value);
+  const b4_v  = parseFloat(document.getElementById('b4_final').value);
+  const b3_v  = parseFloat(document.getElementById('b3_final').value);
+  const ra_v  = parseFloat(document.getElementById('ra_final').value);
+  const msg   = document.getElementById('diffApplyMsg');
+  if ([Ad_v,msd_v,b4_v,b3_v,ra_v].some(isNaN) || [Ad_v,msd_v,b4_v,b3_v,ra_v].some(x=>x<=0)) {
+    msg.className='apply-msg err'; msg.style.display='';
+    msg.textContent='⚠ 请确认所有输入框均已填入有效正数。'; return;
+  }
+  state.A_d = Ad_v; state.ms_d = msd_v;
+  state.b4 = b4_v; state.b3 = b3_v; state.ra_pin = ra_v;
+  document.getElementById('rd').value = ra_v;
+  const n_ = state.n_planet || parseInt(vStr('nPlanet'));
+  state.d_pin = Math.pow(state.Td * 1e3 / (1.1 * n_ * ra_v), 1/3);
+  state.L_pin = 1.1 * state.d_pin;
+  state.D4 = msd_v * state.z4;
+  state.D3 = msd_v * state.z3;
+  updateKsHint();  // 模数圆整后刷新 ks 提示
+  ['Ad_final','ms_d_final','b4_final','b3_final','ra_final'].forEach(id => {
+    const el = document.getElementById(id);
+    el.dataset.userSet = '1';
+    el.style.borderColor = '#267a48'; el.style.background = '#07150f';
+  });
+  msg.className='apply-msg ok'; msg.style.display='';
+  msg.textContent = `✓ 已应用：A₀=${fmtN(Ad_v,2)} mm，m=${fmtN(msd_v,3)} mm，b₂=${fmtN(b4_v,2)} mm，b₃=${fmtN(b3_v,2)} mm，rₐ=${fmtN(ra_v,2)} mm`;
+}
+
+function resetDiffFinalParams() {
+  ['Ad_final','ms_d_final','b4_final','b3_final','ra_final'].forEach(id => {
+    const el = document.getElementById(id);
+    el.dataset.userSet = ''; el.style.borderColor=''; el.style.background='';
+  });
+  const msg = document.getElementById('diffApplyMsg');
+  msg.className='apply-msg ok'; msg.style.display='';
+  msg.textContent='✓ 已重置为计算值，请重新点击【计算差速器参数】以刷新。';
+}
+
+// ─── ks 实时提示 ──────────────────────────────────────────
+function updateKsHint() {
+  const hint = document.getElementById('ks_auto_hint');
+  if (!hint) return;
+  const manual = parseFloat(document.getElementById('ks_input').value);
+  if (!isNaN(manual) && manual > 0) {
+    hint.textContent = `手动值：${manual.toFixed(4)}`;
+    return;
+  }
+  const ms = state.ms_d;
+  if (!ms || ms <= 0) {
+    hint.textContent = '（请先完成①几何参数计算）';
+    return;
+  }
+  const ks_auto = ms >= 1.6 ? Math.pow(ms / 25.4, 0.25) : 0.5;
+  const rule = ms >= 1.6 ? `(${ms.toFixed(3)}/25.4)^0.25` : 'm<1.6，取0.5';
+  hint.textContent = `自动计算：ks = ${ks_auto.toFixed(4)}（${rule}）`;
+}
+
+// ─── 强度校核 ─────────────────────────────────────────────
+function calcDiffStrength() {
+  if (!state.D4) { calcDiff(); }
+
+  const J_d  = v('J_diff') || 0.22;
+  const kv_d = v('kv')     || 1.0;
+  const km_d = v('km_s')   || 1.1;
+  const ms_d_ = state.ms_d;  // 来自几何参数计算结果（或应用取值后的圆整值）
+
+  // ks：优先手动输入，否则按端面模数公式自动计算
+  const ks_manual = parseFloat(document.getElementById('ks_input').value);
+  let ks_d, ks_src;
+  if (!isNaN(ks_manual) && ks_manual > 0) {
+    ks_d = ks_manual;
+    ks_src = '手动输入';
+  } else if (ms_d_ > 0) {
+    ks_d = ms_d_ >= 1.6 ? Math.pow(ms_d_ / 25.4, 0.25) : 0.5;
+    ks_src = ms_d_ >= 1.6
+      ? `(m/25.4)^0.25 = (${fmtN(ms_d_,3)}/25.4)^0.25 = ${fmtN(ks_d,4)}（自动）`
+      : `m<1.6，取0.5（自动）`;
+  } else {
+    alert('端面模数无效，请先完成【①几何参数设计】计算。'); return;
+  }
+  updateKsHint();
+
+  const n_  = state.n_planet || parseInt(vStr('nPlanet'));
+  const b4_ = state.b4 || state.b3;
+  const d4_ = state.D4;
+  const Tc_ = state.Tc || v('Tc');
+
+  // 弯曲应力（Tc 直接输入，式5-38）
+  const sigma = (2 * Tc_ * ks_d * km_d * 1000) / (kv_d * ms_d_ * b4_ * d4_ * J_d * n_);
+  const ok = sigma <= 980;
+
+  const common = `kV = ${fmtN(kv_d,2)}，km = ${fmtN(km_d,3)}，ks（${ks_src}）= ${fmtN(ks_d,4)}
+J = ${fmtN(J_d,3)}，m = ${fmtN(ms_d_,3)} mm，b₂ = ${fmtN(b4_,2)} mm，d₂ = ${fmtN(d4_,2)} mm，n = ${n_}`;
+
+  document.getElementById('diffStrengthResults').innerHTML =
+    `<div class="method-block m1">
+      <span class="method-label m1">弯曲应力（式5-38）：Tc = ${fmtN(Tc_,1)} N·m（直接输入）</span>
+      <div class="formula-box">σ<sub>w</sub> = 2·Tc·k<sub>s</sub>·k<sub>m</sub> / (k<sub>V</sub>·m·b₂·d₂·J·n) × 10³
+${common}
+
+= 2 × ${fmtN(Tc_,1)} × ${fmtN(ks_d,4)} × ${fmtN(km_d,3)} / (${fmtN(kv_d,2)} × ${fmtN(ms_d_,3)} × ${fmtN(b4_,2)} × ${fmtN(d4_,2)} × ${fmtN(J_d,3)} × ${n_}) × 10³
+= <strong>${fmtN(sigma,1)} MPa</strong>　${ok ? '<span style="color:var(--green)">✓ ≤ 980 MPa，满足</span>' : '<span style="color:var(--red)">✗ 超出 980 MPa，不满足</span>'}</div>
+    </div>` +
+    mkCards([
+      { label: 'Tc（输入值）', value: fmtN(Tc_,1), unit: 'N·m', note: '直接输入' },
+      { label: '弯曲应力 σw（式5-38）', value: fmtN(sigma,1), unit: 'MPa', ok, note: ok ? '≤ 980 MPa ✓' : '> 980 MPa ✗，请调整参数' },
+      { label: '行星齿轮轴直径 d', value: fmtN(state.d_pin,2), unit: 'mm', note: '∛(Tc×10³/(1.1·n·rₐ))' },
+      { label: '行星轴支承长度 L', value: fmtN(state.L_pin,2), unit: 'mm', note: '式5-37：1.1 × d' },
+    ]) +
+    `<div class="info-box" style="margin-top:10px">
+      许用值：[σ<sub>w</sub>] ≤ <strong>980 MPa</strong>（按最大应力，Tc = min(Tce, Tcs)）；
+      按疲劳（日常行驶，Tcl）时 [σ<sub>w</sub>] ≤ <strong>210 MPa</strong>。
+    </div>`;
+}
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+if (e.key === 'F12' || 
+(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+(e.ctrlKey && e.key === 'U') ||
+(e.ctrlKey && e.key === 'S')) {
+e.preventDefault();
+return false;
+}
+});
+
+</script>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U') ||
+        (e.ctrlKey && e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
+
+</body>
+</html>
